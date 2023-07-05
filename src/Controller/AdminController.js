@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import mongoose from "mongoose";
+import mongoose, { ObjectId } from "mongoose";
 import { fileURLToPath } from "url";
 import RangeParser from "range-parser";
 import Resize from "../Controller/Resize.js";
@@ -153,19 +153,23 @@ export const addFilm = async (req, res) => {
     const data = req.dataUser;
 
     if (data.role == "admin") {
-      const { name, image, description, kind, idTrailer } = req.body;
+      const { name, image, description, kind, video } = req.body;
 
-      if (!image) return res.sendStatus(400);
+      if (!image || !video) return res.sendStatus(400);
 
-      const randomUUID = uuidv4();
-      const path = await writeImg(`public/images/${randomUUID}.png`, image);
+      const path = await writeImg(`public/images/${uuidv4()}.png`, image);
+      const pathVideo = await writeVideo(
+        `public/videos/${uuidv4()}.mp4`,
+        video
+      );
+
       const newFilm = new Film({
         name: name,
         description: description,
         kind: kind,
         view: 0,
         image: path,
-        ytb_id: idTrailer,
+        ytb_id: pathVideo,
       });
       await newFilm.save();
       res.json({ status: true, message: `Thêm thành công` });
@@ -216,6 +220,29 @@ export const deleteFilm = async (req, res) => {
     await Film.deleteOne({ _id });
 
     res.json({ status: true, message: `Xoá thành công Film có id: ${_id}` });
+  } catch (err) {
+    console.log(err);
+    res.json({ status: false, message: err });
+  }
+};
+
+export const deleteEpisode = async (req, res) => {
+  try {
+    const { idfilm, idepisode } = req.body;
+    const film = await Film.findById(idfilm);
+    const episode = film?.episode;
+    const newArray = episode.filter((obj) => {
+      if (obj._id === undefined) {
+        return false; // Bỏ qua đối tượng với _id không xác định
+      }
+      return !obj._id.equals(idepisode);
+    });
+    film.episode = newArray;
+    await film.save();
+    res.json({
+      status: true,
+      message: `Xoá thành công tập có id: ${idepisode}`,
+    });
   } catch (err) {
     console.log(err);
     res.json({ status: false, message: err });

@@ -4,6 +4,7 @@ import { fileURLToPath } from "url";
 import RangeParser from "range-parser";
 import Resize from "../Controller/Resize.js";
 import FilmModel from "../models/FilmModel.js";
+import ffmpeg from "ffmpeg";
 
 export const getAll = async (req, res) => {
   try {
@@ -26,6 +27,22 @@ export const getFilm = async (req, res) => {
     res.json({ status: false, message: err });
   }
 };
+const decompressVideo = async (path, pathNew) => {
+  return new Promise((resolve, reject) => {
+    ffmpeg()
+      .input(path)
+      .output(pathNew)
+      .on("end", () => {
+        console.log("Giải nén video hoàn thành!");
+        resolve();
+      })
+      .on("error", (err) => {
+        console.error("Lỗi khi giải nén video:", err);
+        reject(err);
+      })
+      .run();
+  });
+};
 
 export const streamVideos = async (req, res) => {
   try {
@@ -38,8 +55,10 @@ export const streamVideos = async (req, res) => {
     const controllerDir = path.resolve(__dirname, "../public");
     const videosDir = path.join(controllerDir, "videos");
     const filmPath = path.join(videosDir, `${pathPhim}`);
+    const pathDecompressVideo = `public/videos/${uuidv4()}.mp4`;
+    const videoStream = decompressVideo(filmPath, pathDecompressVideo);
 
-    const canonicalPath = path.resolve(filmPath);
+    const canonicalPath = path.resolve(videoStream.output);
 
     if (!canonicalPath) {
       return res.status(404).send("File not found");
@@ -64,6 +83,16 @@ export const streamVideos = async (req, res) => {
       };
       res.writeHead(206, head);
       file.pipe(res);
+
+      file.on("end", () => {
+        fs.unlink(videoStream.output, (err) => {
+          if (err) {
+            console.error("Lỗi khi xóa video giải nén:", err);
+          } else {
+            console.log("Xóa video giải nén thành công!");
+          }
+        });
+      });
     } else {
       const head = {
         "Content-Length": fileSize,

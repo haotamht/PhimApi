@@ -8,6 +8,7 @@ import Film from "../models/FilmModel.js";
 import User from "../models/UserModel.js";
 import { v4 as uuidv4 } from "uuid";
 import { promises as fileSystem } from "fs";
+import ffmpeg from "ffmpeg";
 
 export async function loginAdmin(req, res) {
   try {
@@ -92,6 +93,25 @@ const writeVideo = async (path, data) => {
   return newPath;
 };
 
+const compressVideo = async (video, path) => {
+  return new Promise((resolve, reject) => {
+    ffmpeg()
+      .input(video)
+      .output(path)
+      .videoCodec("libx264")
+      .outputOptions("-crf 28")
+      .on("end", () => {
+        console.log("Nén video hoàn thành!");
+        resolve();
+      })
+      .on("error", (err) => {
+        console.error("Lỗi khi nén video:", err);
+        reject(err);
+      })
+      .run();
+  });
+};
+
 export const addEpisodeFilm = async (req, res) => {
   try {
     // Xác thực token
@@ -109,10 +129,14 @@ export const addEpisodeFilm = async (req, res) => {
       }
 
       const path = await writeImg(`public/images/${uuidv4()}.png`, image);
-      const pathVideo = await writeVideo(
-        `public/videos/${uuidv4()}.mp4`,
-        video
+      const newvideo = await compressVideo(
+        video,
+        `public/videos/${uuidv4()}.mp4`
       );
+      // const pathVideo = await writeVideo(
+      //   `public/videos/${uuidv4()}.mp4`,
+      //   newvideo
+      // );
 
       film.episode.push({
         name: name,
@@ -120,7 +144,7 @@ export const addEpisodeFilm = async (req, res) => {
         kind: kind,
         view: 0,
         image: path,
-        ytb_id: pathVideo,
+        ytb_id: newvideo.output,
       });
 
       await film.save();
@@ -158,6 +182,7 @@ export const addFilm = async (req, res) => {
       if (!image) return res.sendStatus(400);
 
       const randomUUID = uuidv4();
+
       const path = await writeImg(`public/images/${randomUUID}.png`, image);
       const newFilm = new Film({
         name: name,

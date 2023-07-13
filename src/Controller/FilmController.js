@@ -21,7 +21,7 @@ export const getFilm = async (req, res) => {
     const id = req.params.id;
 
     let data = await FilmModel.find({ _id: id });
-    res.json({ status: true, data: data });
+    res.json({ status: true, data: data[0] });
   } catch (err) {
     console.log(err);
     res.json({ status: false, message: err });

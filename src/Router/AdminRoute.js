@@ -10,6 +10,7 @@ import {
   deleteFilm,
   deleteUser,
   getFilm,
+  deleteEpisode,
 } from "../Controller/AdminController.js";
 
 import { ValidatePass } from "../Middleware/validatePasswords.js";
@@ -26,6 +27,7 @@ adminRoute.get("/listfilm", verifyTokenAdmin, getAllFilm);
 adminRoute.post("/film", verifyTokenAdmin, addFilm);
 adminRoute.get("/film/:id", verifyTokenAdmin, getFilm);
 adminRoute.post("/delete/film", verifyTokenAdmin, deleteFilm);
+adminRoute.post("/delete/episode", verifyTokenAdmin, deleteEpisode);
 adminRoute.post("/delete/user", verifyTokenAdmin, deleteUser);
 adminRoute.post("/episode", verifyTokenAdmin, addEpisodeFilm);
 
